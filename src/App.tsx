@@ -13,6 +13,7 @@ import {
   getPerformances,
 } from './lib/api';
 import { Contribution, Expense, Performance } from './lib/types';
+import { Analytics } from '@vercel/analytics/react';
 
 type SectionType = 'contribute' | 'expenses' | 'performances';
 
@@ -344,6 +345,9 @@ export const App: React.FC = () => {
           </div>
         </div>
       </footer>
+
+      {/* Vercel Web Analytics */}
+      <Analytics />
     </div>
   );
 };
