@@ -63,3 +63,33 @@ export interface PerformancesResponse {
   totalCount?: number;
   error?: string;
 }
+
+export type VolunteerRole =
+  | 'Bhog Distribution'
+  | 'Pandal & Crowd Coordination'
+  | 'Cultural & Stage Support'
+  | 'Anandamela Food Stall'
+  | 'Decorations & Lighting'
+  | 'General Help & Support';
+
+export interface Volunteer {
+  name: string;
+  role: string;
+  availability: string;
+}
+
+export interface VolunteerFormData {
+  name: string;
+  role: string;
+  availability: string;
+  contact?: string;
+  notes?: string;
+  honeypot?: string;
+}
+
+export interface VolunteersResponse {
+  success?: boolean;
+  volunteers: Volunteer[];
+  totalCount?: number;
+  error?: string;
+}

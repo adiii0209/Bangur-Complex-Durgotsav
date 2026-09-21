@@ -20,6 +20,7 @@ const SPREADSHEET_ID = '1oLa7_OfSUHLGej-LQ0_Y3Q9ITyPA2CbnHSuQ0IGHDaE';
 const TAB_CONTRIBUTIONS = 'Contributions';
 const TAB_EXPENSES = 'Expenses';
 const TAB_PERFORMANCES = 'Performances';
+const TAB_VOLUNTEERS = 'Volunteers';
 
 /**
  * Get active spreadsheet reference (works container-bound or standalone)
@@ -33,7 +34,7 @@ function getSpreadsheet() {
 }
 
 /**
- * One-click Setup: Automatically creates and formats all three tabs
+ * One-click Setup: Automatically creates and formats all tabs
  */
 function setupSheet() {
   const ss = getSpreadsheet();
@@ -98,6 +99,27 @@ function setupSheet() {
     perfSheet.setColumnWidth(5, 150);
   }
 
+  // 4. Volunteers tab
+  let volSheet = ss.getSheetByName(TAB_VOLUNTEERS);
+  if (!volSheet) {
+    volSheet = ss.insertSheet(TAB_VOLUNTEERS);
+  }
+  if (volSheet.getLastRow() === 0) {
+    const headers = [['Timestamp', 'Name', 'Role', 'Availability', 'Contact', 'Notes']];
+    volSheet.getRange(1, 1, 1, headers[0].length).setValues(headers);
+    volSheet.getRange(1, 1, 1, headers[0].length)
+      .setFontWeight('bold')
+      .setBackground('#1E3A8A')
+      .setFontColor('#FFFFFF');
+    volSheet.setFrozenRows(1);
+    volSheet.setColumnWidth(1, 180);
+    volSheet.setColumnWidth(2, 200);
+    volSheet.setColumnWidth(3, 220);
+    volSheet.setColumnWidth(4, 180);
+    volSheet.setColumnWidth(5, 150);
+    volSheet.setColumnWidth(6, 250);
+  }
+
   Logger.log('Bangur Durga Puja 2026 sheets initialized successfully.');
   return { success: true, message: 'All sheets initialized with required columns.' };
 }
@@ -107,7 +129,12 @@ function setupSheet() {
  */
 function ensureSheetsExist() {
   const ss = getSpreadsheet();
-  if (!ss.getSheetByName(TAB_CONTRIBUTIONS) || !ss.getSheetByName(TAB_EXPENSES) || !ss.getSheetByName(TAB_PERFORMANCES)) {
+  if (
+    !ss.getSheetByName(TAB_CONTRIBUTIONS) ||
+    !ss.getSheetByName(TAB_EXPENSES) ||
+    !ss.getSheetByName(TAB_PERFORMANCES) ||
+    !ss.getSheetByName(TAB_VOLUNTEERS)
+  ) {
     setupSheet();
   }
 }
@@ -126,12 +153,14 @@ function doGet(e) {
       return handleGetExpenses();
     } else if (action === 'getPerformances') {
       return handleGetPerformances();
+    } else if (action === 'getVolunteers') {
+      return handleGetVolunteers();
     } else if (action === 'setup') {
       return jsonResponse(setupSheet());
     } else {
       return jsonResponse({
         success: false,
-        error: 'Invalid or missing action parameter. Valid actions: getContributions, getExpenses, getPerformances'
+        error: 'Invalid or missing action parameter. Valid actions: getContributions, getExpenses, getPerformances, getVolunteers'
       });
     }
   } catch (err) {
@@ -171,6 +200,8 @@ function doPost(e) {
       return handleAddContribution(data);
     } else if (action === 'addPerformanceRegistration') {
       return handleAddPerformance(data);
+    } else if (action === 'addVolunteer') {
+      return handleAddVolunteer(data);
     } else {
       return jsonResponse({
         success: false,
@@ -382,6 +413,82 @@ function handleAddPerformance(data) {
   return jsonResponse({
     success: true,
     message: 'Performance registration received successfully! See you on stage.'
+  });
+}
+
+/**
+ * Public Volunteers List
+ * NOTE: Contact and notes are strictly kept private for the committee
+ */
+function handleGetVolunteers() {
+  const ss = getSpreadsheet();
+  const sheet = ss.getSheetByName(TAB_VOLUNTEERS);
+  if (!sheet) return jsonResponse({ volunteers: [] });
+
+  const lastRow = sheet.getLastRow();
+  if (lastRow <= 1) {
+    return jsonResponse({ volunteers: [] });
+  }
+
+  // Row columns: [Timestamp, Name, Role, Availability, Contact, Notes]
+  const values = sheet.getRange(2, 1, lastRow - 1, 6).getValues();
+  const volunteers = [];
+
+  for (let i = values.length - 1; i >= 0; i--) {
+    const row = values[i];
+    const name = String(row[1] || '').trim();
+    const role = String(row[2] || '').trim();
+    if (name) {
+      volunteers.push({
+        name: name,
+        role: role || 'General Help & Support',
+        availability: String(row[3] || 'Flexible').trim()
+      });
+    }
+  }
+
+  return jsonResponse({
+    success: true,
+    volunteers: volunteers,
+    totalCount: volunteers.length
+  });
+}
+
+/**
+ * Add Volunteer Registration
+ */
+function handleAddVolunteer(data) {
+  const name = String(data.name || '').trim();
+  const role = String(data.role || 'General Help & Support').trim();
+  const availability = String(data.availability || 'All Days').trim();
+  const contact = String(data.contact || '').trim();
+  const notes = String(data.notes || '').trim();
+
+  // Server-side validation
+  if (!name || name.length > 100) {
+    return jsonResponse({ success: false, error: 'Volunteer name is required (max 100 characters)' });
+  }
+  if (!role || role.length > 100) {
+    return jsonResponse({ success: false, error: 'Volunteer role is required' });
+  }
+  if (contact && contact.length > 25) {
+    return jsonResponse({ success: false, error: 'Contact number cannot exceed 25 characters' });
+  }
+  if (notes && notes.length > 500) {
+    return jsonResponse({ success: false, error: 'Notes cannot exceed 500 characters' });
+  }
+
+  const ss = getSpreadsheet();
+  const sheet = ss.getSheetByName(TAB_VOLUNTEERS);
+  if (!sheet) {
+    return jsonResponse({ success: false, error: 'Volunteers sheet not found' });
+  }
+
+  sheet.appendRow([new Date(), name, role, availability, contact, notes]);
+
+  return jsonResponse({
+    success: true,
+    message: 'Welcome to the Bangur Puja 2026 volunteer squad! The committee will connect with you soon.'
   });
 }
 

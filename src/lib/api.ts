@@ -5,6 +5,8 @@ import {
   ExpensesResponse,
   PerformanceFormData,
   PerformancesResponse,
+  VolunteerFormData,
+  VolunteersResponse,
   ApiResponse,
 } from './types';
 
@@ -253,3 +255,104 @@ export async function addPerformance(formData: PerformanceFormData): Promise<Api
     }
   }
 }
+
+/**
+ * Fetch Volunteers roster from Google Sheet
+ */
+export async function getVolunteers(): Promise<VolunteersResponse> {
+  if (!isLiveMode()) {
+    return {
+      success: true,
+      volunteers: [],
+      totalCount: 0,
+    };
+  }
+
+  try {
+    const url = `${APPS_SCRIPT_URL}?action=getVolunteers&_t=${Date.now()}`;
+    const res = await fetch(url, { method: 'GET' });
+    if (!res.ok) {
+      throw new Error(`HTTP error ${res.status}`);
+    }
+    const data = await res.json();
+    return {
+      success: true,
+      volunteers: data.volunteers || [],
+      totalCount: data.totalCount || (data.volunteers || []).length,
+    };
+  } catch (error) {
+    console.error('getVolunteers error:', error);
+    return {
+      success: false,
+      error: 'Unable to load volunteers from Google Sheets.',
+      volunteers: [],
+      totalCount: 0,
+    };
+  }
+}
+
+/**
+ * Submit Volunteer Registration with dual-mode fallback (standard + no-cors)
+ */
+export async function addVolunteer(formData: VolunteerFormData): Promise<ApiResponse> {
+  const payload = {
+    action: 'addVolunteer',
+    name: formData.name.trim(),
+    role: formData.role.trim(),
+    availability: formData.availability.trim(),
+    contact: formData.contact ? formData.contact.trim() : '',
+    notes: formData.notes ? formData.notes.trim() : '',
+    honeypot: formData.honeypot || '',
+  };
+
+  if (!isLiveMode()) {
+    return {
+      success: false,
+      error: 'Google Apps Script URL is not configured.',
+    };
+  }
+
+  try {
+    const response = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'text/plain;charset=utf-8',
+      },
+      body: JSON.stringify(payload),
+    });
+
+    try {
+      const result = await response.json();
+      return result;
+    } catch {
+      return {
+        success: true,
+        message: 'Volunteer registration recorded successfully.',
+      };
+    }
+  } catch (error) {
+    console.warn('Standard POST hit CORS, falling back to no-cors:', error);
+    try {
+      await fetch(APPS_SCRIPT_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: {
+          'Content-Type': 'text/plain;charset=utf-8',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      return {
+        success: true,
+        message: 'Volunteer registration recorded successfully.',
+      };
+    } catch (fallbackError) {
+      console.error('All submission attempts failed:', fallbackError);
+      return {
+        success: false,
+        error: 'Unable to submit volunteer registration. Please verify Google Apps Script deployment permissions are set to "Anyone".',
+      };
+    }
+  }
+}
+

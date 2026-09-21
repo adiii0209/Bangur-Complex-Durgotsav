@@ -1,8 +1,8 @@
 import React from 'react';
-import { HeartHandshake, ReceiptText, Sparkles, ChevronDown } from 'lucide-react';
+import { HeartHandshake, ReceiptText, Sparkles, ChevronDown, HandHeart } from 'lucide-react';
 
 interface HeroSectionProps {
-  onSelectSection: (section: 'contribute' | 'expenses' | 'performances') => void;
+  onSelectSection: (section: 'contribute' | 'expenses' | 'performances' | 'volunteer') => void;
 }
 
 export const HeroSection: React.FC<HeroSectionProps> = ({ onSelectSection }) => {
@@ -79,6 +79,17 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onSelectSection }) => 
             <span className="truncate">
               Register<span className="hidden sm:inline"> Act</span>
             </span>
+          </button>
+        </div>
+
+        {/* 4th Big Length Button for Volunteering & Community Participation */}
+        <div className="w-full max-w-lg mx-auto mt-2.5 sm:mt-3 px-1 sm:px-0">
+          <button
+            onClick={() => onSelectSection('volunteer')}
+            className="w-full flex items-center justify-center space-x-2 px-4 py-2.5 sm:py-3 rounded-xl bg-gradient-to-r from-blue-700 via-indigo-700 to-blue-800 hover:from-blue-800 hover:to-indigo-900 text-white font-semibold text-xs sm:text-sm shadow-md hover:shadow-lg shadow-blue-900/30 border border-blue-400/40 hover:scale-[1.01] active:scale-[0.99] transition-all duration-200 cursor-pointer"
+          >
+            <HandHeart className="w-4 h-4 text-amber-300 shrink-0" />
+            <span className="truncate">Join Volunteer Squad & Participate</span>
           </button>
         </div>
 

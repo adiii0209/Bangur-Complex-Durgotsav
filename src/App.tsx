@@ -1,21 +1,24 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { HeartHandshake, ReceiptText, Sparkles, Shield, MapPin, CalendarDays } from 'lucide-react';
+import { HeartHandshake, ReceiptText, Sparkles, Shield, MapPin, CalendarDays, HandHeart } from 'lucide-react';
 import { HeroSection } from './components/HeroSection';
 import { ContributeForm } from './components/ContributeForm';
 import { ContributorList } from './components/ContributorList';
 import { ExpensesTab } from './components/ExpensesTab';
 import { PerformanceForm } from './components/PerformanceForm';
 import { ParticipantList } from './components/ParticipantList';
+import { VolunteerForm } from './components/VolunteerForm';
+import { VolunteerList } from './components/VolunteerList';
 import { SuccessAnimation } from './components/SuccessAnimation';
 import {
   getContributions,
   getExpenses,
   getPerformances,
+  getVolunteers,
 } from './lib/api';
-import { Contribution, Expense, Performance } from './lib/types';
+import { Contribution, Expense, Performance, Volunteer } from './lib/types';
 import { Analytics } from '@vercel/analytics/react';
 
-type SectionType = 'contribute' | 'expenses' | 'performances';
+type SectionType = 'contribute' | 'expenses' | 'performances' | 'volunteer';
 
 export const App: React.FC = () => {
   // Navigation State with URL hash synchronization
@@ -28,11 +31,13 @@ export const App: React.FC = () => {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [totalExpenses, setTotalExpenses] = useState<number>(0);
   const [performances, setPerformances] = useState<Performance[]>([]);
+  const [volunteers, setVolunteers] = useState<Volunteer[]>([]);
 
   // Loading States
   const [loadingContributions, setLoadingContributions] = useState(false);
   const [loadingExpenses, setLoadingExpenses] = useState(false);
   const [loadingPerformances, setLoadingPerformances] = useState(false);
+  const [loadingVolunteers, setLoadingVolunteers] = useState(false);
 
   // Success Celebration Modal State
   const [celebrationModal, setCelebrationModal] = useState<{
@@ -101,10 +106,21 @@ export const App: React.FC = () => {
     }
   };
 
+  const loadVolunteers = async () => {
+    setLoadingVolunteers(true);
+    try {
+      const res = await getVolunteers();
+      setVolunteers(res.volunteers || []);
+    } finally {
+      setLoadingVolunteers(false);
+    }
+  };
+
   useEffect(() => {
     loadContributions();
     loadExpenses();
     loadPerformances();
+    loadVolunteers();
   }, []);
 
   // 3. Navigation handler for Hero & Tabs
@@ -144,11 +160,11 @@ export const App: React.FC = () => {
           </div>
 
           {/* Centered Segmented Control */}
-          <nav className="w-full md:w-auto bg-amber-100/70 p-1 rounded-2xl border border-amber-200/90 flex items-center justify-center gap-1 shadow-inner max-w-md mx-auto md:mx-0">
+          <nav className="w-full md:w-auto bg-amber-100/70 p-1 rounded-2xl border border-amber-200/90 flex items-center justify-center gap-1 shadow-inner max-w-xl mx-auto md:mx-0">
             {/* Tab 1: Contribute */}
             <button
               onClick={() => handleSelectSection('contribute')}
-              className={`flex-1 min-w-0 flex items-center justify-center space-x-1 sm:space-x-1.5 px-2 py-1.5 sm:px-4 sm:py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
+              className={`flex-1 min-w-0 flex items-center justify-center space-x-1 px-1.5 sm:px-3 py-1.5 sm:py-2 rounded-xl text-[11px] sm:text-xs md:text-sm font-semibold transition-all cursor-pointer ${
                 activeSection === 'contribute'
                   ? 'bg-puja-red text-white shadow-sm'
                   : 'text-stone-700 hover:text-puja-red hover:bg-amber-200/40'
@@ -158,7 +174,7 @@ export const App: React.FC = () => {
               <span className="truncate">Contribute</span>
               {contributions.length > 0 && (
                 <span
-                  className={`ml-1 text-[10px] px-1.5 py-0.2 rounded-full font-mono shrink-0 ${
+                  className={`ml-1 text-[9px] sm:text-[10px] px-1 sm:px-1.5 py-0.2 rounded-full font-mono shrink-0 ${
                     activeSection === 'contribute'
                       ? 'bg-amber-400 text-puja-dark-deep font-bold'
                       : 'bg-amber-200/80 text-gray-800'
@@ -172,7 +188,7 @@ export const App: React.FC = () => {
             {/* Tab 2: Expenses */}
             <button
               onClick={() => handleSelectSection('expenses')}
-              className={`flex-1 min-w-0 flex items-center justify-center space-x-1 sm:space-x-1.5 px-2 py-1.5 sm:px-4 sm:py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
+              className={`flex-1 min-w-0 flex items-center justify-center space-x-1 px-1.5 sm:px-3 py-1.5 sm:py-2 rounded-xl text-[11px] sm:text-xs md:text-sm font-semibold transition-all cursor-pointer ${
                 activeSection === 'expenses'
                   ? 'bg-puja-red text-white shadow-sm'
                   : 'text-stone-700 hover:text-puja-red hover:bg-amber-200/40'
@@ -185,7 +201,7 @@ export const App: React.FC = () => {
             {/* Tab 3: Performances */}
             <button
               onClick={() => handleSelectSection('performances')}
-              className={`flex-1 min-w-0 flex items-center justify-center space-x-1 sm:space-x-1.5 px-2 py-1.5 sm:px-4 sm:py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
+              className={`flex-1 min-w-0 flex items-center justify-center space-x-1 px-1.5 sm:px-3 py-1.5 sm:py-2 rounded-xl text-[11px] sm:text-xs md:text-sm font-semibold transition-all cursor-pointer ${
                 activeSection === 'performances'
                   ? 'bg-puja-red text-white shadow-sm'
                   : 'text-stone-700 hover:text-puja-red hover:bg-amber-200/40'
@@ -196,13 +212,37 @@ export const App: React.FC = () => {
               <span className="truncate sm:hidden">Events</span>
               {performances.length > 0 && (
                 <span
-                  className={`ml-1 text-[10px] px-1.5 py-0.2 rounded-full font-mono shrink-0 ${
+                  className={`ml-1 text-[9px] sm:text-[10px] px-1 sm:px-1.5 py-0.2 rounded-full font-mono shrink-0 ${
                     activeSection === 'performances'
                       ? 'bg-amber-400 text-puja-dark-deep font-bold'
                       : 'bg-amber-200/80 text-gray-800'
                   }`}
                 >
                   {performances.length}
+                </span>
+              )}
+            </button>
+
+            {/* Tab 4: Volunteer */}
+            <button
+              onClick={() => handleSelectSection('volunteer')}
+              className={`flex-1 min-w-0 flex items-center justify-center space-x-1 px-1.5 sm:px-3 py-1.5 sm:py-2 rounded-xl text-[11px] sm:text-xs md:text-sm font-semibold transition-all cursor-pointer ${
+                activeSection === 'volunteer'
+                  ? 'bg-blue-800 text-white shadow-sm'
+                  : 'text-stone-700 hover:text-blue-800 hover:bg-amber-200/40'
+              }`}
+            >
+              <HandHeart className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+              <span className="truncate">Volunteer</span>
+              {volunteers.length > 0 && (
+                <span
+                  className={`ml-1 text-[9px] sm:text-[10px] px-1 sm:px-1.5 py-0.2 rounded-full font-mono shrink-0 ${
+                    activeSection === 'volunteer'
+                      ? 'bg-amber-400 text-puja-dark-deep font-bold'
+                      : 'bg-amber-200/80 text-gray-800'
+                  }`}
+                >
+                  {volunteers.length}
                 </span>
               )}
             </button>
@@ -285,6 +325,36 @@ export const App: React.FC = () => {
             </div>
           </div>
         )}
+
+        {/* Section 4: Volunteer & Participation Flow */}
+        {activeSection === 'volunteer' && (
+          <div className="space-y-6 animate-fade-in">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 lg:gap-8 items-start">
+              <div className="lg:col-span-6">
+                <VolunteerForm
+                  volunteerCount={volunteers.length}
+                  onSuccess={() => {
+                    loadVolunteers();
+                    setCelebrationModal({
+                      show: true,
+                      title: 'Welcome to the Squad! 🤝',
+                      message: 'Thank you for stepping forward to make Durga Puja 2026 grand and joyous.',
+                      subMessage: 'Your participation is now recorded in the community squad roster below.',
+                    });
+                  }}
+                />
+              </div>
+
+              <div className="lg:col-span-6">
+                <VolunteerList
+                  volunteers={volunteers}
+                  isLoading={loadingVolunteers}
+                  onRefresh={loadVolunteers}
+                />
+              </div>
+            </div>
+          </div>
+        )}
       </main>
 
       {/* 4. Celebratory Success Modal */}
@@ -296,7 +366,12 @@ export const App: React.FC = () => {
           onClose={() => setCelebrationModal({ ...celebrationModal, show: false })}
           onViewList={() => {
             setTimeout(() => {
-              const targetId = activeSection === 'performances' ? 'participant-list' : 'contributor-list';
+              const targetId =
+                activeSection === 'performances'
+                  ? 'participant-list'
+                  : activeSection === 'volunteer'
+                  ? 'volunteer-list'
+                  : 'contributor-list';
               const el = document.getElementById(targetId);
               if (el) {
                 el.scrollIntoView({ behavior: 'smooth', block: 'start' });
