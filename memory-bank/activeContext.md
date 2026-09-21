@@ -25,9 +25,6 @@ Phase 1 implementation complete and fully built!
 
 ## Deployment Info & Live Credentials
 
-- **Deployment ID**: `AKfycbzTeGCg-sVy2oVG1-nsm-6W6Lqq_GI_z-nKH8-gaZV2WfYvPCVEmBUEOGDQRjONd-qvJw`
-- **Web App URL**: `https://script.google.com/macros/s/AKfycbzTeGCg-sVy2oVG1-nsm-6W6Lqq_GI_z-nKH8-gaZV2WfYvPCVEmBUEOGDQRjONd-qvJw/exec`
-- **Configured in**: `.env` (`VITE_APPS_SCRIPT_URL`)
-
-## Important Note on Apps Script Access:
-- In Apps Script (**Deploy > Manage deployments > Edit**), make sure **"Who has access"** is set to **"Anyone"** (so that public contributors without Google logins can submit without being redirected to a Google login page).
+- **Deployment ID**: `AKfycbxhA3e3POrMXGNj0PhlUEisa4bqfRb-hpA9xGNULCjl_nPBs_6pRbCECXCV4nOcTYgxIg`
+- **Web App URL**: `https://script.google.com/macros/s/AKfycbxhA3e3POrMXGNj0PhlUEisa4bqfRb-hpA9xGNULCjl_nPBs_6pRbCECXCV4nOcTYgxIg/exec`
+- **Status**: Live, verified 200 OK without login wall. Returns valid JSON for reads and writes directly to the Google Sheet.

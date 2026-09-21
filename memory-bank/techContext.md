@@ -105,8 +105,8 @@ Returns: `{ "success": true }` or `{ "success": false, "error": "..." }`.
 ## Environment & Deployment References
 
 - **Google Sheet ID**: `1oLa7_OfSUHLGej-LQ0_Y3Q9ITyPA2CbnHSuQ0IGHDaE`
-- **Apps Script Deployment ID**: `AKfycbzTeGCg-sVy2oVG1-nsm-6W6Lqq_GI_z-nKH8-gaZV2WfYvPCVEmBUEOGDQRjONd-qvJw`
-- **Web App URL**: `https://script.google.com/macros/s/AKfycbzTeGCg-sVy2oVG1-nsm-6W6Lqq_GI_z-nKH8-gaZV2WfYvPCVEmBUEOGDQRjONd-qvJw/exec`
+- **Apps Script Deployment ID**: `AKfycbxhA3e3POrMXGNj0PhlUEisa4bqfRb-hpA9xGNULCjl_nPBs_6pRbCECXCV4nOcTYgxIg`
+- **Web App URL**: `https://script.google.com/macros/s/AKfycbxhA3e3POrMXGNj0PhlUEisa4bqfRb-hpA9xGNULCjl_nPBs_6pRbCECXCV4nOcTYgxIg/exec`
 - `VITE_APPS_SCRIPT_URL` — set in `.env` to the Web App URL above.
 
 ## Known constraints / risks to keep in mind
