@@ -1,0 +1,24 @@
+# Dependencies
+node_modules/
+dist/
+dist-ssr/
+*.tsbuildinfo
+
+# Environment
+.env
+.env.local
+*.local
+
+# Raw large video assets
+durgotsav.mp4
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Editor & OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
