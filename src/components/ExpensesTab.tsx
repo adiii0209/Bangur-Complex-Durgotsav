@@ -43,19 +43,19 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Committee Integrity Banner */}
-      <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-2xl border border-amber-200/80 p-5 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div className="flex items-start space-x-3.5">
-          <div className="p-2.5 rounded-xl bg-amber-100 text-puja-red shrink-0 mt-0.5 sm:mt-0">
-            <ShieldCheck className="w-6 h-6" />
+      <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-2xl border border-amber-200/80 p-3.5 sm:p-5 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
+        <div className="flex items-start space-x-3">
+          <div className="p-2 rounded-xl bg-amber-100 text-puja-red shrink-0 mt-0.5 sm:mt-0">
+            <ShieldCheck className="w-5 h-5" />
           </div>
           <div>
-            <h3 className="text-base sm:text-lg font-bold font-serif text-puja-red-900">
-              Official Committee Expense Transparency
+            <h3 className="text-sm sm:text-base font-bold font-serif text-puja-red-900">
+              Committee Expense Transparency
             </h3>
-            <p className="text-xs sm:text-sm text-gray-700 mt-0.5">
-              Maintained by the committee — updated directly in our official records. This tab is strictly a read-only public ledger.
+            <p className="text-[11px] sm:text-xs text-gray-700 mt-0.5">
+              Read-only mirror maintained and audited directly by the puja committee.
             </p>
           </div>
         </div>

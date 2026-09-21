@@ -51,31 +51,31 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onSelectSection }) => 
         </p>
 
         {/* Smaller 3 CTA Buttons: 2 on either side and 1 in the middle */}
-        <div className="w-full max-w-lg mx-auto flex flex-row items-center justify-center gap-2 sm:gap-3.5">
+        <div className="w-full max-w-lg mx-auto flex flex-row items-center justify-center gap-1.5 sm:gap-3.5 px-1 sm:px-0">
           {/* Left Button: Contribute */}
           <button
             onClick={() => onSelectSection('contribute')}
-            className="flex-1 flex items-center justify-center space-x-1.5 sm:space-x-2 px-3 py-2.5 sm:px-4 sm:py-3 rounded-xl bg-gradient-to-r from-amber-500 via-puja-gold to-yellow-500 text-puja-dark-deep font-semibold text-xs sm:text-sm shadow-md hover:shadow-lg shadow-amber-500/20 hover:scale-[1.03] active:scale-[0.98] transition-all duration-200 cursor-pointer border border-amber-300"
+            className="flex-1 min-w-0 flex items-center justify-center space-x-1 sm:space-x-2 px-2 sm:px-4 py-2 sm:py-3 rounded-xl bg-gradient-to-r from-amber-500 via-puja-gold to-yellow-500 text-puja-dark-deep font-semibold text-xs sm:text-sm shadow-md hover:shadow-lg shadow-amber-500/20 hover:scale-[1.03] active:scale-[0.98] transition-all duration-200 cursor-pointer border border-amber-300"
           >
-            <HeartHandshake className="w-4 h-4 text-puja-dark-deep shrink-0" />
+            <HeartHandshake className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-puja-dark-deep shrink-0" />
             <span className="truncate">Contribute</span>
           </button>
 
           {/* Middle Button: Expenses */}
           <button
             onClick={() => onSelectSection('expenses')}
-            className="flex-1 flex items-center justify-center space-x-1.5 sm:space-x-2 px-3 py-2.5 sm:px-4 sm:py-3 rounded-xl bg-black/45 hover:bg-black/65 text-amber-100 hover:text-white font-medium text-xs sm:text-sm border border-amber-300/40 hover:border-amber-300/80 backdrop-blur-md hover:scale-[1.03] active:scale-[0.98] transition-all duration-200 cursor-pointer shadow-md"
+            className="flex-1 min-w-0 flex items-center justify-center space-x-1 sm:space-x-2 px-2 sm:px-4 py-2 sm:py-3 rounded-xl bg-black/45 hover:bg-black/65 text-amber-100 hover:text-white font-medium text-xs sm:text-sm border border-amber-300/40 hover:border-amber-300/80 backdrop-blur-md hover:scale-[1.03] active:scale-[0.98] transition-all duration-200 cursor-pointer shadow-md"
           >
-            <ReceiptText className="w-4 h-4 text-amber-300 shrink-0" />
+            <ReceiptText className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-300 shrink-0" />
             <span className="truncate">Expenses</span>
           </button>
 
           {/* Right Button: Register for Performance */}
           <button
             onClick={() => onSelectSection('performances')}
-            className="flex-1 flex items-center justify-center space-x-1.5 sm:space-x-2 px-3 py-2.5 sm:px-4 sm:py-3 rounded-xl bg-puja-red hover:bg-puja-red-800 text-white font-semibold text-xs sm:text-sm shadow-md hover:shadow-lg shadow-puja-red/25 border border-red-400/40 hover:scale-[1.03] active:scale-[0.98] transition-all duration-200 cursor-pointer"
+            className="flex-1 min-w-0 flex items-center justify-center space-x-1 sm:space-x-2 px-2 sm:px-4 py-2 sm:py-3 rounded-xl bg-puja-red hover:bg-puja-red-800 text-white font-semibold text-xs sm:text-sm shadow-md hover:shadow-lg shadow-puja-red/25 border border-red-400/40 hover:scale-[1.03] active:scale-[0.98] transition-all duration-200 cursor-pointer"
           >
-            <Sparkles className="w-4 h-4 text-amber-300 shrink-0" />
+            <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-300 shrink-0" />
             <span className="truncate">
               Register<span className="hidden sm:inline"> Act</span>
             </span>

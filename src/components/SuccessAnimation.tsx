@@ -8,6 +8,7 @@ interface SuccessAnimationProps {
   message: string;
   subMessage?: string;
   onClose: () => void;
+  onViewList?: () => void;
 }
 
 export const SuccessAnimation: React.FC<SuccessAnimationProps> = ({
@@ -15,30 +16,29 @@ export const SuccessAnimation: React.FC<SuccessAnimationProps> = ({
   message,
   subMessage,
   onClose,
+  onViewList,
 }) => {
   useEffect(() => {
     // Fire festive Durga Puja colored confetti
     const colors = ['#8B0000', '#D4AF37', '#FFD700', '#FFFFFF', '#166534'];
 
-    // Burst 1
     confetti({
-      particleCount: 70,
+      particleCount: 65,
       spread: 60,
       origin: { y: 0.6 },
       colors,
     });
 
-    // Burst 2 after 200ms
     const timer = setTimeout(() => {
       confetti({
-        particleCount: 50,
+        particleCount: 45,
         angle: 60,
         spread: 55,
         origin: { x: 0 },
         colors,
       });
       confetti({
-        particleCount: 50,
+        particleCount: 45,
         angle: 120,
         spread: 55,
         origin: { x: 1 },
@@ -49,8 +49,17 @@ export const SuccessAnimation: React.FC<SuccessAnimationProps> = ({
     return () => clearTimeout(timer);
   }, []);
 
+  const handleViewList = () => {
+    onClose();
+    if (onViewList) {
+      setTimeout(() => {
+        onViewList();
+      }, 100);
+    }
+  };
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/65 backdrop-blur-sm animate-fade-in">
       <div className="relative w-full max-w-md bg-[#FFFDF7] border-2 border-puja-gold/60 rounded-2xl shadow-2xl p-6 sm:p-8 text-center overflow-hidden">
         {/* Decorative corner borders */}
         <div className="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-puja-red rounded-tl-xl m-2 pointer-events-none"></div>
@@ -68,26 +77,31 @@ export const SuccessAnimation: React.FC<SuccessAnimationProps> = ({
         </button>
 
         {/* Icon & Glow */}
-        <div className="relative mx-auto mb-4 w-16 h-16 flex items-center justify-center rounded-full bg-gradient-to-tr from-amber-100 to-amber-200 border-2 border-puja-gold shadow-md">
-          <CheckCircle2 className="w-10 h-10 text-puja-red" />
+        <div className="relative mx-auto mb-4 w-14 h-14 sm:w-16 sm:h-16 flex items-center justify-center rounded-full bg-gradient-to-tr from-amber-100 to-amber-200 border-2 border-puja-gold shadow-md">
+          <CheckCircle2 className="w-8 h-8 sm:w-10 sm:h-10 text-puja-red" />
         </div>
 
         {/* Content */}
-        <h3 className="text-xl sm:text-2xl font-bold font-serif text-puja-red-900 mb-2">
+        <h3 className="text-lg sm:text-2xl font-bold font-serif text-puja-red-900 mb-1.5">
           {title}
         </h3>
-        <p className="text-base text-gray-800 font-medium mb-2">
+        <p className="text-sm sm:text-base text-gray-800 font-medium mb-2">
           {message}
         </p>
         {subMessage && (
-          <p className="text-xs sm:text-sm text-gray-600 mb-6 bg-amber-50 py-2 px-3 rounded-lg border border-amber-200">
+          <p className="text-xs sm:text-sm text-gray-600 mb-5 bg-amber-50 py-2 px-3 rounded-lg border border-amber-200">
             {subMessage}
           </p>
         )}
 
-        <div className="mt-6 flex justify-center">
-          <Button variant="gold" size="md" onClick={onClose} className="w-full sm:w-auto px-8">
-            View List
+        <div className="mt-5 flex justify-center">
+          <Button
+            variant="gold"
+            size="md"
+            onClick={handleViewList}
+            className="w-full sm:w-auto px-8 cursor-pointer shadow-md font-semibold text-sm"
+          >
+            View List ↓
           </Button>
         </div>
       </div>

@@ -30,7 +30,7 @@ export const ContributorList: React.FC<ContributorListProps> = ({
   };
 
   return (
-    <div className="bg-white rounded-2xl border border-amber-200/80 shadow-md p-6 sm:p-8">
+    <div id="contributor-list" className="scroll-mt-16 sm:scroll-mt-20 bg-white rounded-2xl border border-amber-200/80 shadow-md p-4 sm:p-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-4 border-b border-amber-100">
         <div className="flex items-center space-x-3">
@@ -59,17 +59,17 @@ export const ContributorList: React.FC<ContributorListProps> = ({
       </div>
 
       {/* Small Summary Metrics Strip */}
-      <div className="flex items-center justify-between bg-gradient-to-r from-amber-50/90 to-orange-50/70 rounded-xl px-3.5 py-2 mb-4 border border-amber-200/70 text-xs">
-        <div className="flex items-center space-x-1.5 text-gray-600">
+      <div className="flex items-center justify-between gap-2 bg-gradient-to-r from-amber-50/90 to-orange-50/70 rounded-xl px-3 sm:px-3.5 py-2 mb-4 border border-amber-200/70 text-xs overflow-hidden">
+        <div className="flex items-center space-x-1.5 text-gray-600 shrink-0">
           <span className="text-gray-500">Contributions:</span>
           <span className="font-semibold text-gray-900 bg-white/80 px-2 py-0.5 rounded-md border border-amber-200/60 font-mono">
             {contributions.length}
           </span>
         </div>
 
-        <div className="flex items-center space-x-1.5">
-          <Wallet className="w-3.5 h-3.5 text-puja-gold" />
-          <span className="text-gray-500">Total Raised:</span>
+        <div className="flex items-center space-x-1 sm:space-x-1.5 shrink-0">
+          <Wallet className="w-3.5 h-3.5 text-puja-gold shrink-0" />
+          <span className="text-gray-500">Total:</span>
           <span className="font-bold font-serif text-puja-red text-xs sm:text-sm">
             {formatCurrency(totalAmount)}
           </span>
@@ -108,22 +108,22 @@ export const ContributorList: React.FC<ContributorListProps> = ({
           {filtered.map((item, idx) => (
             <div
               key={`${item.name}-${idx}`}
-              className="py-3.5 flex items-center justify-between hover:bg-amber-50/40 px-2 rounded-lg transition-colors"
+              className="py-3 sm:py-3.5 flex items-center justify-between gap-2.5 hover:bg-amber-50/40 px-2 rounded-lg transition-colors overflow-hidden"
             >
               {/* Contributor Name */}
-              <div className="flex items-center space-x-3">
-                <span className="w-7 h-7 rounded-full bg-puja-red-50 border border-puja-red/20 text-puja-red text-xs font-semibold flex items-center justify-center shrink-0">
-                  {idx + 1}
+              <div className="flex items-center space-x-2.5 sm:space-x-3 min-w-0 flex-1">
+                <span className="w-7 h-7 rounded-full bg-gradient-to-br from-amber-100 to-amber-50 border border-amber-200/80 text-puja-red font-semibold text-xs flex items-center justify-center shrink-0 uppercase shadow-xs">
+                  {item.name ? item.name.trim().charAt(0).toUpperCase() : '•'}
                 </span>
-                <span className="text-sm font-medium text-gray-900">
+                <span className="text-xs sm:text-sm font-medium text-gray-900 truncate">
                   {item.name}
                 </span>
               </div>
 
               {/* Masked + Blurred Amount */}
-              <div className="flex items-center space-x-1.5">
+              <div className="flex items-center shrink-0">
                 <span
-                  className="text-xs sm:text-sm font-mono tracking-widest text-gray-400 bg-stone-100 px-2.5 py-1 rounded-md border border-stone-200 select-none blur-[1.5px] hover:blur-none transition-all duration-300"
+                  className="text-xs font-mono tracking-wider sm:tracking-widest text-gray-400 bg-stone-100 px-2 sm:px-2.5 py-1 rounded-md border border-stone-200 select-none blur-[1.5px] hover:blur-none transition-all duration-300 shrink-0"
                   title="Amount is masked for privacy"
                 >
                   {item.amountMasked || '₹ ● ● ● ●'}

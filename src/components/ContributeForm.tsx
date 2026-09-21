@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { HeartHandshake, AlertCircle, Info } from 'lucide-react';
+import { HeartHandshake, AlertCircle, Users } from 'lucide-react';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
@@ -9,9 +9,10 @@ import { addContribution } from '../lib/api';
 
 interface ContributeFormProps {
   onSuccess: () => void;
+  contributorCount?: number;
 }
 
-export const ContributeForm: React.FC<ContributeFormProps> = ({ onSuccess }) => {
+export const ContributeForm: React.FC<ContributeFormProps> = ({ onSuccess, contributorCount = 0 }) => {
   const [formData, setFormData] = useState<ContributionFormData>({
     name: '',
     amount: '',
@@ -55,46 +56,58 @@ export const ContributeForm: React.FC<ContributeFormProps> = ({ onSuccess }) => 
       } else {
         setServerError(response.error || 'Failed to submit. Please try again.');
       }
-    } catch (err) {
+    } catch {
       setServerError('A network error occurred. Please check your connection.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  return (
-    <div className="bg-white rounded-2xl border border-amber-200/80 shadow-md p-6 sm:p-8">
-      <div className="flex items-center space-x-3 mb-4">
-        <div className="p-2.5 rounded-xl bg-amber-100 text-puja-red">
-          <HeartHandshake className="w-6 h-6" />
-        </div>
-        <div>
-          <h2 className="text-xl font-bold font-serif text-puja-red-900">
-            Record Your Contribution
-          </h2>
-          <p className="text-xs sm:text-sm text-gray-500">
-            Let the puja committee know about your support for Durga Puja 2026.
-          </p>
-        </div>
-      </div>
+  const scrollToContributors = () => {
+    const el = document.getElementById('contributor-list');
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
 
-      {/* Gentle notice that this is a pledge/record, not payment gateway */}
-      <div className="mb-6 p-3 rounded-xl bg-amber-50 border border-amber-200 flex items-start space-x-2.5 text-xs text-amber-900 leading-relaxed">
-        <Info className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
-        <span>
-          <strong>Note:</strong> This records your contribution pledge with the committee. No money moves through this website — please hand over cash or complete your UPI/Bank transfer with the committee.
-        </span>
+  return (
+    <div className="bg-white rounded-2xl border border-amber-200/80 shadow-md p-4 sm:p-6 text-left">
+      {/* Compact Header with Mobile Quick Jump */}
+      <div className="flex items-center justify-between gap-2 mb-4 pb-3 border-b border-amber-100">
+        <div className="flex items-center space-x-2.5">
+          <div className="p-2 rounded-xl bg-amber-100 text-puja-red shrink-0">
+            <HeartHandshake className="w-5 h-5" />
+          </div>
+          <div>
+            <h2 className="text-base sm:text-lg font-bold font-serif text-puja-red-900 leading-tight">
+              Record Contribution
+            </h2>
+            <p className="text-[11px] sm:text-xs text-gray-500">
+              Durga Puja 2026 Committee Drive
+            </p>
+          </div>
+        </div>
+
+        {/* Quick jump to list on mobile */}
+        <button
+          type="button"
+          onClick={scrollToContributors}
+          className="lg:hidden inline-flex items-center space-x-1 px-2.5 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 text-[11px] font-medium text-puja-red-800 border border-amber-200 transition-colors cursor-pointer"
+        >
+          <Users className="w-3.5 h-3.5 text-puja-red" />
+          <span>List ({contributorCount}) ↓</span>
+        </button>
       </div>
 
       {serverError && (
-        <div className="mb-5 p-3 rounded-xl bg-red-50 border border-red-200 flex items-center space-x-2 text-xs sm:text-sm text-red-700">
+        <div className="mb-4 p-2.5 rounded-xl bg-red-50 border border-red-200 flex items-center space-x-2 text-xs text-red-700">
           <AlertCircle className="w-4 h-4 shrink-0 text-red-600" />
           <span>{serverError}</span>
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-4 text-left">
-        {/* Honeypot field for spam prevention */}
+      <form onSubmit={handleSubmit} className="space-y-3.5">
+        {/* Honeypot field for bot protection */}
         <input
           type="text"
           name="website"
@@ -108,21 +121,22 @@ export const ContributeForm: React.FC<ContributeFormProps> = ({ onSuccess }) => 
 
         {/* Name input */}
         <Input
-          label="Your Name or Family Name"
-          placeholder="e.g. Debashis & Sharmila Mukherjee / Flat 3B"
+          label="Name / Family"
+          placeholder="e.g. Debashis Mukherjee (Flat 3B)"
           value={formData.name}
           onChange={(e) => {
             setFormData({ ...formData, name: e.target.value });
             if (errors.name) setErrors({ ...errors, name: '' });
           }}
           error={errors.name}
+          className="py-2 text-xs sm:text-sm"
           required
         />
 
-        {/* Amount & Mode in grid on sm: */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {/* Amount & Mode */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Input
-            label="Contribution Amount (₹)"
+            label="Amount (₹)"
             type="number"
             min="1"
             step="1"
@@ -134,12 +148,13 @@ export const ContributeForm: React.FC<ContributeFormProps> = ({ onSuccess }) => 
               if (errors.amount) setErrors({ ...errors, amount: '' });
             }}
             error={errors.amount}
-            helperText="Amounts are kept private on the public list"
+            helperText="Amounts are masked on the public list"
+            className="py-2 text-xs sm:text-sm"
             required
           />
 
           <Select
-            label="Mode of Contribution"
+            label="Payment Mode"
             options={modeOptions}
             value={formData.mode}
             onChange={(e) => {
@@ -147,20 +162,24 @@ export const ContributeForm: React.FC<ContributeFormProps> = ({ onSuccess }) => 
               if (errors.mode) setErrors({ ...errors, mode: '' });
             }}
             error={errors.mode}
+            className="py-2 text-xs sm:text-sm"
             required
           />
         </div>
 
-        <div className="pt-2">
+        <div className="pt-1">
           <Button
             type="submit"
             variant="gold"
-            size="lg"
+            size="md"
             isLoading={isSubmitting}
-            className="w-full text-base font-semibold shadow-md py-3"
+            className="w-full text-sm font-semibold shadow-md py-2.5"
           >
             Record Contribution
           </Button>
+          <p className="text-[11px] text-gray-400 text-center mt-2">
+            Pledge record only • Committee collects funds directly via cash/UPI
+          </p>
         </div>
       </form>
     </div>

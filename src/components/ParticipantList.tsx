@@ -34,7 +34,7 @@ export const ParticipantList: React.FC<ParticipantListProps> = ({
   };
 
   return (
-    <div className="bg-white rounded-2xl border border-amber-200/80 shadow-md p-6 sm:p-8">
+    <div id="participant-list" className="scroll-mt-16 sm:scroll-mt-20 bg-white rounded-2xl border border-amber-200/80 shadow-md p-4 sm:p-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 pb-4 border-b border-amber-100">
         <div className="flex items-center space-x-3">
@@ -94,7 +94,7 @@ export const ParticipantList: React.FC<ParticipantListProps> = ({
           {filtered.map((perf, idx) => (
             <div
               key={`${perf.name}-${idx}`}
-              className="p-4 rounded-xl border border-amber-100 bg-gradient-to-br from-white to-amber-50/30 hover:border-amber-300 transition-all text-left flex flex-col justify-between"
+              className="p-4 rounded-xl border border-amber-100 bg-gradient-to-br from-white to-amber-50/30 hover:border-amber-300 transition-all text-left flex flex-col justify-between overflow-hidden"
             >
               <div>
                 <div className="flex items-center justify-between gap-2 mb-2">
@@ -102,18 +102,15 @@ export const ParticipantList: React.FC<ParticipantListProps> = ({
                     {getCategoryIcon(perf.category)}
                     {perf.category}
                   </Badge>
-                  <span className="text-[11px] font-mono text-gray-400">
-                    #{idx + 1}
-                  </span>
                 </div>
-                <h4 className="text-sm font-bold text-gray-900 leading-snug">
+                <h4 className="text-sm font-bold text-gray-900 leading-snug break-words">
                   {perf.actName}
                 </h4>
               </div>
 
               <div className="mt-3 pt-2.5 border-t border-amber-100/80 flex items-center text-xs text-gray-600">
-                <span className="text-gray-400 mr-1.5">Artist:</span>
-                <span className="font-semibold text-puja-red-800">{perf.name}</span>
+                <span className="text-gray-400 mr-1.5 shrink-0">Artist:</span>
+                <span className="font-semibold text-puja-red-800 truncate">{perf.name}</span>
               </div>
             </div>
           ))}

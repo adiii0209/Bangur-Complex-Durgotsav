@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Sparkles, AlertCircle, Info } from 'lucide-react';
+import { Sparkles, AlertCircle, Users } from 'lucide-react';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
@@ -9,9 +9,10 @@ import { addPerformance } from '../lib/api';
 
 interface PerformanceFormProps {
   onSuccess: () => void;
+  participantCount?: number;
 }
 
-export const PerformanceForm: React.FC<PerformanceFormProps> = ({ onSuccess }) => {
+export const PerformanceForm: React.FC<PerformanceFormProps> = ({ onSuccess, participantCount = 0 }) => {
   const [formData, setFormData] = useState<PerformanceFormData>({
     name: '',
     actName: '',
@@ -60,44 +61,57 @@ export const PerformanceForm: React.FC<PerformanceFormProps> = ({ onSuccess }) =
       } else {
         setServerError(response.error || 'Failed to submit registration. Please try again.');
       }
-    } catch (err) {
+    } catch {
       setServerError('A network error occurred. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  return (
-    <div className="bg-white rounded-2xl border border-amber-200/80 shadow-md p-6 sm:p-8">
-      <div className="flex items-center space-x-3 mb-4">
-        <div className="p-2.5 rounded-xl bg-red-100 text-puja-red">
-          <Sparkles className="w-6 h-6" />
-        </div>
-        <div>
-          <h2 className="text-xl font-bold font-serif text-puja-red-900">
-            Register for Cultural Evening
-          </h2>
-          <p className="text-xs sm:text-sm text-gray-500">
-            Showcase your talent on the Bangur Complex Durga Puja stage!
-          </p>
-        </div>
-      </div>
+  const scrollToParticipants = () => {
+    const el = document.getElementById('participant-list');
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
 
-      <div className="mb-6 p-3 rounded-xl bg-amber-50 border border-amber-200 flex items-start space-x-2.5 text-xs text-amber-900 leading-relaxed">
-        <Info className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
-        <span>
-          Residents of all ages are warmly invited to perform. The committee will coordinate slot timings with you before Saptami.
-        </span>
+  return (
+    <div className="bg-white rounded-2xl border border-amber-200/80 shadow-md p-4 sm:p-6 text-left">
+      {/* Compact Header with Mobile Quick Jump */}
+      <div className="flex items-center justify-between gap-2 mb-4 pb-3 border-b border-amber-100">
+        <div className="flex items-center space-x-2.5">
+          <div className="p-2 rounded-xl bg-red-100 text-puja-red shrink-0">
+            <Sparkles className="w-5 h-5" />
+          </div>
+          <div>
+            <h2 className="text-base sm:text-lg font-bold font-serif text-puja-red-900 leading-tight">
+              Register Performance
+            </h2>
+            <p className="text-[11px] sm:text-xs text-gray-500">
+              Cultural Evenings & Anandamela
+            </p>
+          </div>
+        </div>
+
+        {/* Quick jump to list on mobile */}
+        <button
+          type="button"
+          onClick={scrollToParticipants}
+          className="lg:hidden inline-flex items-center space-x-1 px-2.5 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 text-[11px] font-medium text-puja-red-800 border border-amber-200 transition-colors cursor-pointer"
+        >
+          <Users className="w-3.5 h-3.5 text-puja-red" />
+          <span>Artists ({participantCount}) ↓</span>
+        </button>
       </div>
 
       {serverError && (
-        <div className="mb-5 p-3 rounded-xl bg-red-50 border border-red-200 flex items-center space-x-2 text-xs sm:text-sm text-red-700">
+        <div className="mb-4 p-2.5 rounded-xl bg-red-50 border border-red-200 flex items-center space-x-2 text-xs text-red-700">
           <AlertCircle className="w-4 h-4 shrink-0 text-red-600" />
           <span>{serverError}</span>
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-4 text-left">
+      <form onSubmit={handleSubmit} className="space-y-3.5">
         {/* Honeypot field for bot protection */}
         <input
           type="text"
@@ -120,26 +134,28 @@ export const PerformanceForm: React.FC<PerformanceFormProps> = ({ onSuccess }) =
             if (errors.name) setErrors({ ...errors, name: '' });
           }}
           error={errors.name}
+          className="py-2 text-xs sm:text-sm"
           required
         />
 
         {/* Act Description */}
         <Input
           label="Performance / Act Description"
-          placeholder="e.g. Rabindra Sangeet & Semi-Classical Dance Medley"
+          placeholder="e.g. Rabindra Sangeet & Dance Medley"
           value={formData.actName}
           onChange={(e) => {
             setFormData({ ...formData, actName: e.target.value });
             if (errors.actName) setErrors({ ...errors, actName: '' });
           }}
           error={errors.actName}
+          className="py-2 text-xs sm:text-sm"
           required
         />
 
-        {/* Category & Contact grid on sm: */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {/* Category & Contact */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Select
-            label="Performance Category"
+            label="Category"
             options={categoryOptions}
             value={formData.category}
             onChange={(e) => {
@@ -147,11 +163,12 @@ export const PerformanceForm: React.FC<PerformanceFormProps> = ({ onSuccess }) =
               if (errors.category) setErrors({ ...errors, category: '' });
             }}
             error={errors.category}
+            className="py-2 text-xs sm:text-sm"
             required
           />
 
           <Input
-            label="Contact Number (Optional)"
+            label="Phone (Optional)"
             type="tel"
             placeholder="e.g. 9830012345"
             value={formData.contact}
@@ -160,20 +177,24 @@ export const PerformanceForm: React.FC<PerformanceFormProps> = ({ onSuccess }) =
               if (errors.contact) setErrors({ ...errors, contact: '' });
             }}
             error={errors.contact}
-            helperText="Kept confidential — never shown on the public site"
+            helperText="Kept strictly confidential"
+            className="py-2 text-xs sm:text-sm"
           />
         </div>
 
-        <div className="pt-2">
+        <div className="pt-1">
           <Button
             type="submit"
             variant="primary"
-            size="lg"
+            size="md"
             isLoading={isSubmitting}
-            className="w-full text-base font-semibold shadow-md py-3"
+            className="w-full text-sm font-semibold shadow-md py-2.5"
           >
             Submit Registration
           </Button>
+          <p className="text-[11px] text-gray-400 text-center mt-2">
+            The committee will coordinate rehearsal & slot timings with participants
+          </p>
         </div>
       </form>
     </div>
