@@ -14,6 +14,10 @@ import {
   getExpenses,
   getPerformances,
   getVolunteers,
+  getCachedContributions,
+  getCachedExpenses,
+  getCachedPerformances,
+  getCachedVolunteers,
 } from './lib/api';
 import { Contribution, Expense, Performance, Volunteer } from './lib/types';
 import { Analytics } from '@vercel/analytics/react';
@@ -25,19 +29,39 @@ export const App: React.FC = () => {
   const [activeSection, setActiveSection] = useState<SectionType>('contribute');
   const sectionContentRef = useRef<HTMLDivElement>(null);
 
-  // Data State
-  const [contributions, setContributions] = useState<Contribution[]>([]);
-  const [totalContributionsAmount, setTotalContributionsAmount] = useState<number>(0);
-  const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [totalExpenses, setTotalExpenses] = useState<number>(0);
-  const [performances, setPerformances] = useState<Performance[]>([]);
-  const [volunteers, setVolunteers] = useState<Volunteer[]>([]);
+  // Data State — Initialized directly from localStorage for 0ms instant display!
+  const [contributions, setContributions] = useState<Contribution[]>(
+    () => getCachedContributions().contributions || []
+  );
+  const [totalContributionsAmount, setTotalContributionsAmount] = useState<number>(
+    () => getCachedContributions().totalAmount || 0
+  );
+  const [expenses, setExpenses] = useState<Expense[]>(
+    () => getCachedExpenses().expenses || []
+  );
+  const [totalExpenses, setTotalExpenses] = useState<number>(
+    () => getCachedExpenses().totalAmount || 0
+  );
+  const [performances, setPerformances] = useState<Performance[]>(
+    () => getCachedPerformances().performances || []
+  );
+  const [volunteers, setVolunteers] = useState<Volunteer[]>(
+    () => getCachedVolunteers().volunteers || []
+  );
 
-  // Loading States
-  const [loadingContributions, setLoadingContributions] = useState(false);
-  const [loadingExpenses, setLoadingExpenses] = useState(false);
-  const [loadingPerformances, setLoadingPerformances] = useState(false);
-  const [loadingVolunteers, setLoadingVolunteers] = useState(false);
+  // Show loading indicators only if no cached data is available
+  const [loadingContributions, setLoadingContributions] = useState(
+    () => (getCachedContributions().contributions || []).length === 0
+  );
+  const [loadingExpenses, setLoadingExpenses] = useState(
+    () => (getCachedExpenses().expenses || []).length === 0
+  );
+  const [loadingPerformances, setLoadingPerformances] = useState(
+    () => (getCachedPerformances().performances || []).length === 0
+  );
+  const [loadingVolunteers, setLoadingVolunteers] = useState(
+    () => (getCachedVolunteers().volunteers || []).length === 0
+  );
 
   // Success Celebration Modal State
   const [celebrationModal, setCelebrationModal] = useState<{
@@ -55,14 +79,24 @@ export const App: React.FC = () => {
   useEffect(() => {
     const handleHashChange = () => {
       const hash = window.location.hash.replace('#', '').toLowerCase();
-      if (hash === 'contribute' || hash === 'expenses' || hash === 'performances') {
+      if (
+        hash === 'contribute' ||
+        hash === 'expenses' ||
+        hash === 'performances' ||
+        hash === 'volunteer'
+      ) {
         setActiveSection(hash as SectionType);
       }
     };
 
     // On initial load
     const initialHash = window.location.hash.replace('#', '').toLowerCase();
-    if (initialHash === 'contribute' || initialHash === 'expenses' || initialHash === 'performances') {
+    if (
+      initialHash === 'contribute' ||
+      initialHash === 'expenses' ||
+      initialHash === 'performances' ||
+      initialHash === 'volunteer'
+    ) {
       setActiveSection(initialHash as SectionType);
       setTimeout(() => {
         sectionContentRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -73,11 +107,14 @@ export const App: React.FC = () => {
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
 
-  // 2. Fetch data on load
-  const loadContributions = async () => {
-    setLoadingContributions(true);
+  // 2. Fetch / Background Revalidate data
+  const loadContributions = async (showSpinner = false) => {
+    if (showSpinner) setLoadingContributions(true);
     try {
-      const res = await getContributions();
+      const res = await getContributions((fresh) => {
+        setContributions(fresh.contributions || []);
+        setTotalContributionsAmount(fresh.totalAmount || 0);
+      });
       setContributions(res.contributions || []);
       setTotalContributionsAmount(res.totalAmount || 0);
     } finally {
@@ -85,10 +122,13 @@ export const App: React.FC = () => {
     }
   };
 
-  const loadExpenses = async () => {
-    setLoadingExpenses(true);
+  const loadExpenses = async (showSpinner = false) => {
+    if (showSpinner) setLoadingExpenses(true);
     try {
-      const res = await getExpenses();
+      const res = await getExpenses((fresh) => {
+        setExpenses(fresh.expenses || []);
+        setTotalExpenses(fresh.totalAmount || 0);
+      });
       setExpenses(res.expenses || []);
       setTotalExpenses(res.totalAmount || 0);
     } finally {
@@ -96,20 +136,24 @@ export const App: React.FC = () => {
     }
   };
 
-  const loadPerformances = async () => {
-    setLoadingPerformances(true);
+  const loadPerformances = async (showSpinner = false) => {
+    if (showSpinner) setLoadingPerformances(true);
     try {
-      const res = await getPerformances();
+      const res = await getPerformances((fresh) => {
+        setPerformances(fresh.performances || []);
+      });
       setPerformances(res.performances || []);
     } finally {
       setLoadingPerformances(false);
     }
   };
 
-  const loadVolunteers = async () => {
-    setLoadingVolunteers(true);
+  const loadVolunteers = async (showSpinner = false) => {
+    if (showSpinner) setLoadingVolunteers(true);
     try {
-      const res = await getVolunteers();
+      const res = await getVolunteers((fresh) => {
+        setVolunteers(fresh.volunteers || []);
+      });
       setVolunteers(res.volunteers || []);
     } finally {
       setLoadingVolunteers(false);
@@ -261,7 +305,9 @@ export const App: React.FC = () => {
                 <ContributeForm
                   contributorCount={contributions.length}
                   onSuccess={() => {
-                    loadContributions();
+                    const fresh = getCachedContributions();
+                    setContributions(fresh.contributions || []);
+                    setTotalContributionsAmount(fresh.totalAmount || 0);
                     setCelebrationModal({
                       show: true,
                       title: 'Thank You for Your Support! 🙏',
@@ -277,7 +323,7 @@ export const App: React.FC = () => {
                   contributions={contributions}
                   totalAmount={totalContributionsAmount}
                   isLoading={loadingContributions}
-                  onRefresh={loadContributions}
+                  onRefresh={() => loadContributions(true)}
                 />
               </div>
             </div>
@@ -291,7 +337,7 @@ export const App: React.FC = () => {
               expenses={expenses}
               totalAmount={totalExpenses}
               isLoading={loadingExpenses}
-              onRefresh={loadExpenses}
+              onRefresh={() => loadExpenses(true)}
             />
           </div>
         )}
@@ -304,7 +350,8 @@ export const App: React.FC = () => {
                 <PerformanceForm
                   participantCount={performances.length}
                   onSuccess={() => {
-                    loadPerformances();
+                    const fresh = getCachedPerformances();
+                    setPerformances(fresh.performances || []);
                     setCelebrationModal({
                       show: true,
                       title: 'Registration Received! 🎭',
@@ -319,7 +366,7 @@ export const App: React.FC = () => {
                 <ParticipantList
                   performances={performances}
                   isLoading={loadingPerformances}
-                  onRefresh={loadPerformances}
+                  onRefresh={() => loadPerformances(true)}
                 />
               </div>
             </div>
@@ -334,7 +381,8 @@ export const App: React.FC = () => {
                 <VolunteerForm
                   volunteerCount={volunteers.length}
                   onSuccess={() => {
-                    loadVolunteers();
+                    const fresh = getCachedVolunteers();
+                    setVolunteers(fresh.volunteers || []);
                     setCelebrationModal({
                       show: true,
                       title: 'Welcome to the Squad! 🤝',
@@ -349,7 +397,7 @@ export const App: React.FC = () => {
                 <VolunteerList
                   volunteers={volunteers}
                   isLoading={loadingVolunteers}
-                  onRefresh={loadVolunteers}
+                  onRefresh={() => loadVolunteers(true)}
                 />
               </div>
             </div>

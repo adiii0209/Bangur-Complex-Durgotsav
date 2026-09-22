@@ -21,6 +21,7 @@ const TAB_CONTRIBUTIONS = 'Contributions';
 const TAB_EXPENSES = 'Expenses';
 const TAB_PERFORMANCES = 'Performances';
 const TAB_VOLUNTEERS = 'Volunteers';
+const CACHE_TTL_SECONDS = 600; // 10 minutes cache in Google CacheService
 
 /**
  * Get active spreadsheet reference (works container-bound or standalone)
@@ -223,6 +224,12 @@ function doPost(e) {
  * 2. Mode is NOT shown on the public list - only name and masked amount
  */
 function handleGetContributions() {
+  const cache = CacheService.getScriptCache();
+  const cached = cache.get('cache_contributions');
+  if (cached) {
+    return ContentService.createTextOutput(cached).setMimeType(ContentService.MimeType.JSON);
+  }
+
   const ss = getSpreadsheet();
   const sheet = ss.getSheetByName(TAB_CONTRIBUTIONS);
   if (!sheet) return jsonResponse({ contributions: [] });
@@ -251,18 +258,30 @@ function handleGetContributions() {
     }
   }
 
-  return jsonResponse({
+  const result = {
     success: true,
     contributions: contributions,
     totalCount: contributions.length,
     totalAmount: totalAmount
-  });
+  };
+
+  try {
+    cache.put('cache_contributions', JSON.stringify(result), CACHE_TTL_SECONDS);
+  } catch (e) {}
+
+  return jsonResponse(result);
 }
 
 /**
  * Read-only Expenses Tab Mirror
  */
 function handleGetExpenses() {
+  const cache = CacheService.getScriptCache();
+  const cached = cache.get('cache_expenses');
+  if (cached) {
+    return ContentService.createTextOutput(cached).setMimeType(ContentService.MimeType.JSON);
+  }
+
   const ss = getSpreadsheet();
   const sheet = ss.getSheetByName(TAB_EXPENSES);
   if (!sheet) return jsonResponse({ expenses: [], totalAmount: 0 });
@@ -303,11 +322,17 @@ function handleGetExpenses() {
     }
   }
 
-  return jsonResponse({
+  const result = {
     success: true,
     expenses: expenses,
     totalAmount: totalAmount
-  });
+  };
+
+  try {
+    cache.put('cache_expenses', JSON.stringify(result), CACHE_TTL_SECONDS);
+  } catch (e) {}
+
+  return jsonResponse(result);
 }
 
 /**
@@ -315,6 +340,12 @@ function handleGetExpenses() {
  * NOTE: Contact number is strictly EXCLUDED from public output
  */
 function handleGetPerformances() {
+  const cache = CacheService.getScriptCache();
+  const cached = cache.get('cache_performances');
+  if (cached) {
+    return ContentService.createTextOutput(cached).setMimeType(ContentService.MimeType.JSON);
+  }
+
   const ss = getSpreadsheet();
   const sheet = ss.getSheetByName(TAB_PERFORMANCES);
   if (!sheet) return jsonResponse({ performances: [] });
@@ -341,11 +372,17 @@ function handleGetPerformances() {
     }
   }
 
-  return jsonResponse({
+  const result = {
     success: true,
     performances: performances,
     totalCount: performances.length
-  });
+  };
+
+  try {
+    cache.put('cache_performances', JSON.stringify(result), CACHE_TTL_SECONDS);
+  } catch (e) {}
+
+  return jsonResponse(result);
 }
 
 /**
@@ -375,6 +412,9 @@ function handleAddContribution(data) {
   }
 
   sheet.appendRow([new Date(), name, amount, mode]);
+  try {
+    CacheService.getScriptCache().remove('cache_contributions');
+  } catch (e) {}
 
   return jsonResponse({
     success: true,
@@ -409,6 +449,9 @@ function handleAddPerformance(data) {
   }
 
   sheet.appendRow([new Date(), name, actName, category, contact]);
+  try {
+    CacheService.getScriptCache().remove('cache_performances');
+  } catch (e) {}
 
   return jsonResponse({
     success: true,
@@ -421,6 +464,12 @@ function handleAddPerformance(data) {
  * NOTE: Contact and notes are strictly kept private for the committee
  */
 function handleGetVolunteers() {
+  const cache = CacheService.getScriptCache();
+  const cached = cache.get('cache_volunteers');
+  if (cached) {
+    return ContentService.createTextOutput(cached).setMimeType(ContentService.MimeType.JSON);
+  }
+
   const ss = getSpreadsheet();
   const sheet = ss.getSheetByName(TAB_VOLUNTEERS);
   if (!sheet) return jsonResponse({ volunteers: [] });
@@ -447,11 +496,17 @@ function handleGetVolunteers() {
     }
   }
 
-  return jsonResponse({
+  const result = {
     success: true,
     volunteers: volunteers,
     totalCount: volunteers.length
-  });
+  };
+
+  try {
+    cache.put('cache_volunteers', JSON.stringify(result), CACHE_TTL_SECONDS);
+  } catch (e) {}
+
+  return jsonResponse(result);
 }
 
 /**
@@ -485,6 +540,9 @@ function handleAddVolunteer(data) {
   }
 
   sheet.appendRow([new Date(), name, role, availability, contact, notes]);
+  try {
+    CacheService.getScriptCache().remove('cache_volunteers');
+  } catch (e) {}
 
   return jsonResponse({
     success: true,

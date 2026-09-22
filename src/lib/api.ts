@@ -1,14 +1,24 @@
 import {
   ContributionFormData,
   ContributionsResponse,
+  Contribution,
   Expense,
   ExpensesResponse,
   PerformanceFormData,
+  Performance,
   PerformancesResponse,
   VolunteerFormData,
+  Volunteer,
   VolunteersResponse,
   ApiResponse,
 } from './types';
+import {
+  getCacheItem,
+  setCacheItem,
+  enqueueItem,
+  processQueue,
+  QueueItem,
+} from './cacheQueue';
 
 const APPS_SCRIPT_URL = import.meta.env.VITE_APPS_SCRIPT_URL || '';
 
@@ -16,135 +26,250 @@ export const isLiveMode = (): boolean => {
   return Boolean(APPS_SCRIPT_URL && APPS_SCRIPT_URL.trim().length > 10);
 };
 
-/**
- * Fetch Contributors list from Google Sheet
- */
-export async function getContributions(): Promise<ContributionsResponse> {
-  if (!isLiveMode()) {
-    return {
+// Cache keys
+const KEY_CONTRIBUTIONS = 'contributions';
+const KEY_EXPENSES = 'expenses';
+const KEY_PERFORMANCES = 'performances';
+const KEY_VOLUNTEERS = 'volunteers';
+
+// -------------------------------------------------------------
+// 1. Synchronous Cache Getters (0ms UI Initial Paint)
+// -------------------------------------------------------------
+
+export function getCachedContributions(): ContributionsResponse {
+  const cached = getCacheItem<ContributionsResponse>(KEY_CONTRIBUTIONS);
+  return (
+    cached || {
       success: true,
       contributions: [],
       totalCount: 0,
       totalAmount: 0,
-    };
-  }
-
-  try {
-    const url = `${APPS_SCRIPT_URL}?action=getContributions&_t=${Date.now()}`;
-    const res = await fetch(url, { method: 'GET' });
-    if (!res.ok) {
-      throw new Error(`HTTP error ${res.status}`);
     }
-    const data = await res.json();
-    return {
-      success: true,
-      contributions: data.contributions || [],
-      totalCount: data.totalCount || (data.contributions || []).length,
-      totalAmount: data.totalAmount || 0,
-    };
-  } catch (error) {
-    console.error('getContributions error:', error);
-    return {
-      success: false,
-      error: 'Unable to connect to Google Sheets. Please ensure Apps Script deployment access is set to "Anyone".',
-      contributions: [],
-      totalCount: 0,
-      totalAmount: 0,
-    };
-  }
+  );
 }
 
-/**
- * Fetch Expenses mirror from Google Sheet
- */
-export async function getExpenses(): Promise<ExpensesResponse> {
-  if (!isLiveMode()) {
-    return {
+export function getCachedExpenses(): ExpensesResponse {
+  const cached = getCacheItem<ExpensesResponse>(KEY_EXPENSES);
+  return (
+    cached || {
       success: true,
       expenses: [],
       totalAmount: 0,
-    };
-  }
-
-  try {
-    const url = `${APPS_SCRIPT_URL}?action=getExpenses&_t=${Date.now()}`;
-    const res = await fetch(url, { method: 'GET' });
-    if (!res.ok) {
-      throw new Error(`HTTP error ${res.status}`);
     }
-    const data = await res.json();
-    return {
-      success: true,
-      expenses: data.expenses || [],
-      totalAmount:
-        data.totalAmount !== undefined
-          ? data.totalAmount
-          : (data.expenses || []).reduce((acc: number, cur: Expense) => acc + (cur.amount || 0), 0),
-    };
-  } catch (error) {
-    console.error('getExpenses error:', error);
-    return {
-      success: false,
-      error: 'Unable to load expenses from Google Sheets.',
-      expenses: [],
-      totalAmount: 0,
-    };
-  }
+  );
 }
 
+export function getCachedPerformances(): PerformancesResponse {
+  const cached = getCacheItem<PerformancesResponse>(KEY_PERFORMANCES);
+  return (
+    cached || {
+      success: true,
+      performances: [],
+      totalCount: 0,
+    }
+  );
+}
+
+export function getCachedVolunteers(): VolunteersResponse {
+  const cached = getCacheItem<VolunteersResponse>(KEY_VOLUNTEERS);
+  return (
+    cached || {
+      success: true,
+      volunteers: [],
+      totalCount: 0,
+    }
+  );
+}
+
+// -------------------------------------------------------------
+// 2. Fetchers with Stale-While-Revalidate
+// -------------------------------------------------------------
+
 /**
- * Fetch Performances list from Google Sheet
+ * Fetch Contributors list with instant cache return and background revalidation
  */
-export async function getPerformances(): Promise<PerformancesResponse> {
+export async function getContributions(
+  onBackgroundUpdate?: (data: ContributionsResponse) => void
+): Promise<ContributionsResponse> {
+  const cached = getCachedContributions();
+
   if (!isLiveMode()) {
-    return {
-      success: true,
-      performances: [],
-      totalCount: 0,
-    };
+    return cached;
   }
 
-  try {
-    const url = `${APPS_SCRIPT_URL}?action=getPerformances&_t=${Date.now()}`;
-    const res = await fetch(url, { method: 'GET' });
-    if (!res.ok) {
-      throw new Error(`HTTP error ${res.status}`);
+  // Background fetch to sync with Google Sheet
+  const revalidate = async () => {
+    try {
+      const url = `${APPS_SCRIPT_URL}?action=getContributions`;
+      const res = await fetch(url, { method: 'GET' });
+      if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+      const data = await res.json();
+      const result: ContributionsResponse = {
+        success: true,
+        contributions: data.contributions || [],
+        totalCount: data.totalCount || (data.contributions || []).length,
+        totalAmount: data.totalAmount || 0,
+      };
+
+      setCacheItem(KEY_CONTRIBUTIONS, result);
+      if (onBackgroundUpdate) {
+        onBackgroundUpdate(result);
+      }
+      return result;
+    } catch (error) {
+      console.warn('Background getContributions sync warning:', error);
+      return cached;
     }
-    const data = await res.json();
-    return {
-      success: true,
-      performances: data.performances || [],
-      totalCount: data.totalCount || (data.performances || []).length,
-    };
-  } catch (error) {
-    console.error('getPerformances error:', error);
-    return {
-      success: false,
-      error: 'Unable to load registered performances from Google Sheets.',
-      performances: [],
-      totalCount: 0,
-    };
-  }
-}
-
-/**
- * Submit Contribution with dual-mode fallback (standard + no-cors)
- */
-export async function addContribution(formData: ContributionFormData): Promise<ApiResponse> {
-  const payload = {
-    action: 'addContribution',
-    name: formData.name.trim(),
-    amount: Number(formData.amount),
-    mode: formData.mode,
-    honeypot: formData.honeypot || '',
   };
 
-  if (!isLiveMode()) {
-    return {
-      success: false,
-      error: 'Google Apps Script URL is not configured.',
-    };
+  // If we already have cached items, return cached immediately and revalidate in background
+  if (cached.contributions && cached.contributions.length > 0) {
+    revalidate();
+    return cached;
   }
+
+  // First time load with empty cache: wait for network
+  return await revalidate();
+}
+
+/**
+ * Fetch Expenses with instant cache return and background revalidation
+ */
+export async function getExpenses(
+  onBackgroundUpdate?: (data: ExpensesResponse) => void
+): Promise<ExpensesResponse> {
+  const cached = getCachedExpenses();
+
+  if (!isLiveMode()) {
+    return cached;
+  }
+
+  const revalidate = async () => {
+    try {
+      const url = `${APPS_SCRIPT_URL}?action=getExpenses`;
+      const res = await fetch(url, { method: 'GET' });
+      if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+      const data = await res.json();
+      const result: ExpensesResponse = {
+        success: true,
+        expenses: data.expenses || [],
+        totalAmount:
+          data.totalAmount !== undefined
+            ? data.totalAmount
+            : (data.expenses || []).reduce((acc: number, cur: Expense) => acc + (cur.amount || 0), 0),
+      };
+
+      setCacheItem(KEY_EXPENSES, result);
+      if (onBackgroundUpdate) {
+        onBackgroundUpdate(result);
+      }
+      return result;
+    } catch (error) {
+      console.warn('Background getExpenses sync warning:', error);
+      return cached;
+    }
+  };
+
+  if (cached.expenses && cached.expenses.length > 0) {
+    revalidate();
+    return cached;
+  }
+
+  return await revalidate();
+}
+
+/**
+ * Fetch Performances with instant cache return and background revalidation
+ */
+export async function getPerformances(
+  onBackgroundUpdate?: (data: PerformancesResponse) => void
+): Promise<PerformancesResponse> {
+  const cached = getCachedPerformances();
+
+  if (!isLiveMode()) {
+    return cached;
+  }
+
+  const revalidate = async () => {
+    try {
+      const url = `${APPS_SCRIPT_URL}?action=getPerformances`;
+      const res = await fetch(url, { method: 'GET' });
+      if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+      const data = await res.json();
+      const result: PerformancesResponse = {
+        success: true,
+        performances: data.performances || [],
+        totalCount: data.totalCount || (data.performances || []).length,
+      };
+
+      setCacheItem(KEY_PERFORMANCES, result);
+      if (onBackgroundUpdate) {
+        onBackgroundUpdate(result);
+      }
+      return result;
+    } catch (error) {
+      console.warn('Background getPerformances sync warning:', error);
+      return cached;
+    }
+  };
+
+  if (cached.performances && cached.performances.length > 0) {
+    revalidate();
+    return cached;
+  }
+
+  return await revalidate();
+}
+
+/**
+ * Fetch Volunteers with instant cache return and background revalidation
+ */
+export async function getVolunteers(
+  onBackgroundUpdate?: (data: VolunteersResponse) => void
+): Promise<VolunteersResponse> {
+  const cached = getCachedVolunteers();
+
+  if (!isLiveMode()) {
+    return cached;
+  }
+
+  const revalidate = async () => {
+    try {
+      const url = `${APPS_SCRIPT_URL}?action=getVolunteers`;
+      const res = await fetch(url, { method: 'GET' });
+      if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+      const data = await res.json();
+      const result: VolunteersResponse = {
+        success: true,
+        volunteers: data.volunteers || [],
+        totalCount: data.totalCount || (data.volunteers || []).length,
+      };
+
+      setCacheItem(KEY_VOLUNTEERS, result);
+      if (onBackgroundUpdate) {
+        onBackgroundUpdate(result);
+      }
+      return result;
+    } catch (error) {
+      console.warn('Background getVolunteers sync warning:', error);
+      return cached;
+    }
+  };
+
+  if (cached.volunteers && cached.volunteers.length > 0) {
+    revalidate();
+    return cached;
+  }
+
+  return await revalidate();
+}
+
+// -------------------------------------------------------------
+// 3. Network Dispatcher with Resilient Dual-Mode Fallback
+// -------------------------------------------------------------
+
+async function sendPayloadToGoogle(payload: Record<string, unknown>): Promise<boolean> {
+  if (!isLiveMode()) return true;
 
   try {
     const response = await fetch(APPS_SCRIPT_URL, {
@@ -156,19 +281,15 @@ export async function addContribution(formData: ContributionFormData): Promise<A
     });
 
     try {
-      const result = await response.json();
-      return result;
+      const json = await response.json();
+      return json.success !== false;
     } catch {
-      // In case Apps Script redirects and body isn't readable
-      return {
-        success: true,
-        message: 'Contribution recorded successfully.',
-      };
+      // 302 redirect or opaque response from Google Apps Script still succeeded
+      return true;
     }
-  } catch (error) {
-    console.warn('Standard POST hit CORS or network block, sending with no-cors fallback:', error);
+  } catch {
+    // Standard fetch blocked by CORS or network, attempt no-cors mode
     try {
-      // no-cors sends the POST request without preflight and writes to Google Sheet
       await fetch(APPS_SCRIPT_URL, {
         method: 'POST',
         mode: 'no-cors',
@@ -177,23 +298,84 @@ export async function addContribution(formData: ContributionFormData): Promise<A
         },
         body: JSON.stringify(payload),
       });
-
-      return {
-        success: true,
-        message: 'Contribution recorded successfully.',
-      };
-    } catch (fallbackError) {
-      console.error('All submission attempts failed:', fallbackError);
-      return {
-        success: false,
-        error: 'Unable to record contribution. Please verify Google Apps Script deployment permissions are set to "Anyone".',
-      };
+      return true;
+    } catch (err) {
+      console.warn('Background network dispatch failed, will retry later:', err);
+      return false;
     }
   }
 }
 
 /**
- * Submit Performance Registration with dual-mode fallback (standard + no-cors)
+ * Trigger background queue processor
+ */
+export function triggerQueueSync(): void {
+  processQueue(async (item: QueueItem) => {
+    return await sendPayloadToGoogle(item.payload);
+  });
+}
+
+// Auto-trigger queue processing when user comes back online or switches to tab
+if (typeof window !== 'undefined') {
+  window.addEventListener('online', () => triggerQueueSync());
+  window.addEventListener('focus', () => triggerQueueSync());
+  // Initial sync attempt
+  setTimeout(() => triggerQueueSync(), 1500);
+}
+
+// -------------------------------------------------------------
+// 4. Instant Optimistic Submissions (<100ms UI response)
+// -------------------------------------------------------------
+
+/**
+ * Submit Contribution:
+ * 1. Instantly updates local cache (name appears at top of list immediately)
+ * 2. Enqueues task into persistent offline queue
+ * 3. Dispatches background sync worker without blocking UI
+ */
+export async function addContribution(formData: ContributionFormData): Promise<ApiResponse> {
+  const numericAmount = Number(formData.amount);
+  const payload = {
+    action: 'addContribution',
+    name: formData.name.trim(),
+    amount: numericAmount,
+    mode: formData.mode,
+    honeypot: formData.honeypot || '',
+  };
+
+  // 1. Optimistically update local cache
+  const cached = getCachedContributions();
+  const optimisticItem: Contribution = {
+    name: formData.name.trim(),
+    amountMasked: '₹ ● ● ● ●',
+  };
+
+  const updatedContributions = [optimisticItem, ...(cached.contributions || [])];
+  setCacheItem(KEY_CONTRIBUTIONS, {
+    ...cached,
+    contributions: updatedContributions,
+    totalCount: updatedContributions.length,
+    totalAmount: (cached.totalAmount || 0) + (numericAmount || 0),
+  });
+
+  // 2. Enqueue for background transmission
+  enqueueItem('addContribution', payload);
+
+  // 3. Trigger worker asynchronously
+  setTimeout(() => triggerQueueSync(), 50);
+
+  // 4. Return instant success to UI
+  return {
+    success: true,
+    message: 'Contribution recorded successfully.',
+  };
+}
+
+/**
+ * Submit Performance Registration:
+ * 1. Instantly adds act to local cache
+ * 2. Enqueues task to background queue
+ * 3. Triggers background worker
  */
 export async function addPerformance(formData: PerformanceFormData): Promise<ApiResponse> {
   const payload = {
@@ -205,94 +387,38 @@ export async function addPerformance(formData: PerformanceFormData): Promise<Api
     honeypot: formData.honeypot || '',
   };
 
-  if (!isLiveMode()) {
-    return {
-      success: false,
-      error: 'Google Apps Script URL is not configured.',
-    };
-  }
+  // 1. Optimistically update local cache
+  const cached = getCachedPerformances();
+  const optimisticItem: Performance = {
+    name: formData.name.trim(),
+    actName: formData.actName.trim(),
+    category: formData.category,
+  };
 
-  try {
-    const response = await fetch(APPS_SCRIPT_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'text/plain;charset=utf-8',
-      },
-      body: JSON.stringify(payload),
-    });
+  const updatedPerformances = [optimisticItem, ...(cached.performances || [])];
+  setCacheItem(KEY_PERFORMANCES, {
+    ...cached,
+    performances: updatedPerformances,
+    totalCount: updatedPerformances.length,
+  });
 
-    try {
-      const result = await response.json();
-      return result;
-    } catch {
-      return {
-        success: true,
-        message: 'Performance registration recorded successfully.',
-      };
-    }
-  } catch (error) {
-    console.warn('Standard POST hit CORS, falling back to no-cors:', error);
-    try {
-      await fetch(APPS_SCRIPT_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: {
-          'Content-Type': 'text/plain;charset=utf-8',
-        },
-        body: JSON.stringify(payload),
-      });
+  // 2. Enqueue for background transmission
+  enqueueItem('addPerformanceRegistration', payload);
 
-      return {
-        success: true,
-        message: 'Performance registration recorded successfully.',
-      };
-    } catch (fallbackError) {
-      console.error('All submission attempts failed:', fallbackError);
-      return {
-        success: false,
-        error: 'Unable to submit registration. Please verify Google Apps Script deployment permissions are set to "Anyone".',
-      };
-    }
-  }
+  // 3. Trigger worker asynchronously
+  setTimeout(() => triggerQueueSync(), 50);
+
+  return {
+    success: true,
+    message: 'Performance registration recorded successfully.',
+  };
 }
 
 /**
- * Fetch Volunteers roster from Google Sheet
- */
-export async function getVolunteers(): Promise<VolunteersResponse> {
-  if (!isLiveMode()) {
-    return {
-      success: true,
-      volunteers: [],
-      totalCount: 0,
-    };
-  }
-
-  try {
-    const url = `${APPS_SCRIPT_URL}?action=getVolunteers&_t=${Date.now()}`;
-    const res = await fetch(url, { method: 'GET' });
-    if (!res.ok) {
-      throw new Error(`HTTP error ${res.status}`);
-    }
-    const data = await res.json();
-    return {
-      success: true,
-      volunteers: data.volunteers || [],
-      totalCount: data.totalCount || (data.volunteers || []).length,
-    };
-  } catch (error) {
-    console.error('getVolunteers error:', error);
-    return {
-      success: false,
-      error: 'Unable to load volunteers from Google Sheets.',
-      volunteers: [],
-      totalCount: 0,
-    };
-  }
-}
-
-/**
- * Submit Volunteer Registration with dual-mode fallback (standard + no-cors)
+ * Submit Volunteer Registration:
+ * 1. Instantly adds volunteer to squad cache
+ * 2. Enqueues task to background queue
+ * 3. Triggers background worker
  */
 export async function addVolunteer(formData: VolunteerFormData): Promise<ApiResponse> {
   const payload = {
@@ -305,54 +431,31 @@ export async function addVolunteer(formData: VolunteerFormData): Promise<ApiResp
     honeypot: formData.honeypot || '',
   };
 
-  if (!isLiveMode()) {
-    return {
-      success: false,
-      error: 'Google Apps Script URL is not configured.',
-    };
-  }
+  // 1. Optimistically update local cache
+  const cached = getCachedVolunteers();
+  const optimisticItem: Volunteer = {
+    name: formData.name.trim(),
+    role: formData.role.trim(),
+    availability: formData.availability.trim(),
+  };
 
-  try {
-    const response = await fetch(APPS_SCRIPT_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'text/plain;charset=utf-8',
-      },
-      body: JSON.stringify(payload),
-    });
+  const updatedVolunteers = [optimisticItem, ...(cached.volunteers || [])];
+  setCacheItem(KEY_VOLUNTEERS, {
+    ...cached,
+    volunteers: updatedVolunteers,
+    totalCount: updatedVolunteers.length,
+  });
 
-    try {
-      const result = await response.json();
-      return result;
-    } catch {
-      return {
-        success: true,
-        message: 'Volunteer registration recorded successfully.',
-      };
-    }
-  } catch (error) {
-    console.warn('Standard POST hit CORS, falling back to no-cors:', error);
-    try {
-      await fetch(APPS_SCRIPT_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: {
-          'Content-Type': 'text/plain;charset=utf-8',
-        },
-        body: JSON.stringify(payload),
-      });
+  // 2. Enqueue for background transmission
+  enqueueItem('addVolunteer', payload);
 
-      return {
-        success: true,
-        message: 'Volunteer registration recorded successfully.',
-      };
-    } catch (fallbackError) {
-      console.error('All submission attempts failed:', fallbackError);
-      return {
-        success: false,
-        error: 'Unable to submit volunteer registration. Please verify Google Apps Script deployment permissions are set to "Anyone".',
-      };
-    }
-  }
+  // 3. Trigger worker asynchronously
+  setTimeout(() => triggerQueueSync(), 50);
+
+  return {
+    success: true,
+    message: 'Volunteer registration recorded successfully.',
+  };
 }
+
 
