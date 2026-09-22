@@ -26,6 +26,13 @@ export const isLiveMode = (): boolean => {
   return Boolean(APPS_SCRIPT_URL && APPS_SCRIPT_URL.trim().length > 10);
 };
 
+import {
+  initialContributions,
+  initialExpenses,
+  initialPerformances,
+  initialVolunteers,
+} from './initialData';
+
 // Cache keys
 const KEY_CONTRIBUTIONS = 'contributions';
 const KEY_EXPENSES = 'expenses';
@@ -33,52 +40,39 @@ const KEY_PERFORMANCES = 'performances';
 const KEY_VOLUNTEERS = 'volunteers';
 
 // -------------------------------------------------------------
-// 1. Synchronous Cache Getters (0ms UI Initial Paint)
+// 1. Synchronous Cache Getters (0ms UI Initial Paint, even on first visit!)
 // -------------------------------------------------------------
 
 export function getCachedContributions(): ContributionsResponse {
   const cached = getCacheItem<ContributionsResponse>(KEY_CONTRIBUTIONS);
-  return (
-    cached || {
-      success: true,
-      contributions: [],
-      totalCount: 0,
-      totalAmount: 0,
-    }
-  );
+  if (cached && cached.contributions && cached.contributions.length > 0) {
+    return cached;
+  }
+  return initialContributions;
 }
 
 export function getCachedExpenses(): ExpensesResponse {
   const cached = getCacheItem<ExpensesResponse>(KEY_EXPENSES);
-  return (
-    cached || {
-      success: true,
-      expenses: [],
-      totalAmount: 0,
-    }
-  );
+  if (cached && cached.expenses && cached.expenses.length > 0) {
+    return cached;
+  }
+  return initialExpenses;
 }
 
 export function getCachedPerformances(): PerformancesResponse {
   const cached = getCacheItem<PerformancesResponse>(KEY_PERFORMANCES);
-  return (
-    cached || {
-      success: true,
-      performances: [],
-      totalCount: 0,
-    }
-  );
+  if (cached && cached.performances) {
+    return cached;
+  }
+  return initialPerformances;
 }
 
 export function getCachedVolunteers(): VolunteersResponse {
   const cached = getCacheItem<VolunteersResponse>(KEY_VOLUNTEERS);
-  return (
-    cached || {
-      success: true,
-      volunteers: [],
-      totalCount: 0,
-    }
-  );
+  if (cached && cached.volunteers && cached.volunteers.length > 0) {
+    return cached;
+  }
+  return initialVolunteers;
 }
 
 // -------------------------------------------------------------
@@ -262,6 +256,54 @@ export async function getVolunteers(
   }
 
   return await revalidate();
+}
+
+/**
+ * Unified one-shot sync: fetches all sections in a single round-trip
+ */
+export async function syncAllData(): Promise<boolean> {
+  if (!isLiveMode()) return false;
+  try {
+    const url = `${APPS_SCRIPT_URL}?action=getAll`;
+    const res = await fetch(url, { method: 'GET' });
+    if (!res.ok) return false;
+    const data = await res.json();
+    if (data && data.success) {
+      if (data.contributions) {
+        setCacheItem(KEY_CONTRIBUTIONS, {
+          success: true,
+          contributions: data.contributions,
+          totalCount: data.totalCount || data.contributions.length,
+          totalAmount: data.totalContributions || data.totalAmount || 0,
+        });
+      }
+      if (data.expenses) {
+        setCacheItem(KEY_EXPENSES, {
+          success: true,
+          expenses: data.expenses,
+          totalAmount: data.totalExpenses || 0,
+        });
+      }
+      if (data.performances) {
+        setCacheItem(KEY_PERFORMANCES, {
+          success: true,
+          performances: data.performances,
+          totalCount: data.performances.length,
+        });
+      }
+      if (data.volunteers) {
+        setCacheItem(KEY_VOLUNTEERS, {
+          success: true,
+          volunteers: data.volunteers,
+          totalCount: data.volunteers.length,
+        });
+      }
+      return true;
+    }
+  } catch (e) {
+    console.warn('syncAllData fallback:', e);
+  }
+  return false;
 }
 
 // -------------------------------------------------------------

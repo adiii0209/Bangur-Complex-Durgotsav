@@ -14,6 +14,7 @@ import {
   getExpenses,
   getPerformances,
   getVolunteers,
+  syncAllData,
   getCachedContributions,
   getCachedExpenses,
   getCachedPerformances,
@@ -161,11 +162,39 @@ export const App: React.FC = () => {
   };
 
   useEffect(() => {
-    loadContributions();
-    loadExpenses();
-    loadPerformances();
-    loadVolunteers();
-  }, []);
+    // 1. Immediately fetch fresh data for the active tab
+    if (activeSection === 'contribute') {
+      loadContributions();
+    } else if (activeSection === 'expenses') {
+      loadExpenses();
+    } else if (activeSection === 'performances') {
+      loadPerformances();
+    } else if (activeSection === 'volunteer') {
+      loadVolunteers();
+    }
+
+    // 2. Silently sync all tabs in background after a 1.2s delay without blocking
+    const timer = setTimeout(async () => {
+      const synced = await syncAllData();
+      if (synced) {
+        const c = getCachedContributions();
+        setContributions(c.contributions || []);
+        setTotalContributionsAmount(c.totalAmount || 0);
+
+        const e = getCachedExpenses();
+        setExpenses(e.expenses || []);
+        setTotalExpenses(e.totalAmount || 0);
+
+        const p = getCachedPerformances();
+        setPerformances(p.performances || []);
+
+        const v = getCachedVolunteers();
+        setVolunteers(v.volunteers || []);
+      }
+    }, 1200);
+
+    return () => clearTimeout(timer);
+  }, [activeSection]);
 
   // 3. Navigation handler for Hero & Tabs
   const handleSelectSection = (section: SectionType) => {

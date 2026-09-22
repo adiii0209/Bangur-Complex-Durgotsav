@@ -156,12 +156,14 @@ function doGet(e) {
       return handleGetPerformances();
     } else if (action === 'getVolunteers') {
       return handleGetVolunteers();
+    } else if (action === 'getAll') {
+      return handleGetAll();
     } else if (action === 'setup') {
       return jsonResponse(setupSheet());
     } else {
       return jsonResponse({
         success: false,
-        error: 'Invalid or missing action parameter. Valid actions: getContributions, getExpenses, getPerformances, getVolunteers'
+        error: 'Invalid or missing action parameter. Valid actions: getAll, getContributions, getExpenses, getPerformances, getVolunteers'
       });
     }
   } catch (err) {
@@ -413,7 +415,9 @@ function handleAddContribution(data) {
 
   sheet.appendRow([new Date(), name, amount, mode]);
   try {
-    CacheService.getScriptCache().remove('cache_contributions');
+    const cache = CacheService.getScriptCache();
+    cache.remove('cache_contributions');
+    cache.remove('cache_all_data');
   } catch (e) {}
 
   return jsonResponse({
@@ -450,7 +454,9 @@ function handleAddPerformance(data) {
 
   sheet.appendRow([new Date(), name, actName, category, contact]);
   try {
-    CacheService.getScriptCache().remove('cache_performances');
+    const cache = CacheService.getScriptCache();
+    cache.remove('cache_performances');
+    cache.remove('cache_all_data');
   } catch (e) {}
 
   return jsonResponse({
@@ -541,13 +547,134 @@ function handleAddVolunteer(data) {
 
   sheet.appendRow([new Date(), name, role, availability, contact, notes]);
   try {
-    CacheService.getScriptCache().remove('cache_volunteers');
+    const cache = CacheService.getScriptCache();
+    cache.remove('cache_volunteers');
+    cache.remove('cache_all_data');
   } catch (e) {}
 
   return jsonResponse({
     success: true,
     message: 'Welcome to the Bangur Puja 2026 volunteer squad! The committee will connect with you soon.'
   });
+}
+
+/**
+ * Unified Read: Return all 4 sheets in a single round-trip
+ */
+function handleGetAll() {
+  const cache = CacheService.getScriptCache();
+  const cached = cache.get('cache_all_data');
+  if (cached) {
+    return ContentService.createTextOutput(cached).setMimeType(ContentService.MimeType.JSON);
+  }
+
+  const ss = getSpreadsheet();
+  
+  // 1. Contributions
+  let contributions = [];
+  let totalContributions = 0;
+  const sheetContrib = ss.getSheetByName(TAB_CONTRIBUTIONS);
+  if (sheetContrib && sheetContrib.getLastRow() > 1) {
+    const values = sheetContrib.getRange(2, 1, sheetContrib.getLastRow() - 1, 4).getValues();
+    for (let i = values.length - 1; i >= 0; i--) {
+      const row = values[i];
+      const name = String(row[1] || '').trim();
+      const amt = Number(row[2]) || 0;
+      if (name) {
+        totalContributions += amt;
+        contributions.push({
+          name: name,
+          amountMasked: '₹ ● ● ● ●'
+        });
+      }
+    }
+  }
+
+  // 2. Expenses
+  let expenses = [];
+  let totalExpenses = 0;
+  const sheetExp = ss.getSheetByName(TAB_EXPENSES);
+  if (sheetExp && sheetExp.getLastRow() > 1) {
+    const values = sheetExp.getRange(2, 1, sheetExp.getLastRow() - 1, 6).getValues();
+    for (let i = values.length - 1; i >= 0; i--) {
+      const row = values[i];
+      const item = String(row[1] || '').trim();
+      if (item) {
+        let dateVal = row[0];
+        let formattedDate = '';
+        if (dateVal instanceof Date) {
+          formattedDate = Utilities.formatDate(dateVal, Session.getScriptTimeZone() || 'GMT+05:30', 'yyyy-MM-dd');
+        } else {
+          formattedDate = String(dateVal || '');
+        }
+        const amt = Number(row[3]) || 0;
+        totalExpenses += amt;
+        expenses.push({
+          date: formattedDate,
+          item: item,
+          category: String(row[2] || 'General').trim(),
+          amount: amt,
+          paidTo: String(row[4] || '').trim(),
+          notes: String(row[5] || '').trim()
+        });
+      }
+    }
+  }
+
+  // 3. Performances
+  let performances = [];
+  const sheetPerf = ss.getSheetByName(TAB_PERFORMANCES);
+  if (sheetPerf && sheetPerf.getLastRow() > 1) {
+    const values = sheetPerf.getRange(2, 1, sheetPerf.getLastRow() - 1, 5).getValues();
+    for (let i = values.length - 1; i >= 0; i--) {
+      const row = values[i];
+      const name = String(row[1] || '').trim();
+      const actName = String(row[2] || '').trim();
+      if (name && actName) {
+        performances.push({
+          name: name,
+          actName: actName,
+          category: String(row[3] || 'Other').trim()
+        });
+      }
+    }
+  }
+
+  // 4. Volunteers
+  let volunteers = [];
+  const sheetVol = ss.getSheetByName(TAB_VOLUNTEERS);
+  if (sheetVol && sheetVol.getLastRow() > 1) {
+    const values = sheetVol.getRange(2, 1, sheetVol.getLastRow() - 1, 6).getValues();
+    for (let i = values.length - 1; i >= 0; i--) {
+      const row = values[i];
+      const name = String(row[1] || '').trim();
+      const role = String(row[2] || '').trim();
+      if (name) {
+        volunteers.push({
+          name: name,
+          role: role || 'General Help & Support',
+          availability: String(row[3] || 'Flexible').trim()
+        });
+      }
+    }
+  }
+
+  const result = {
+    success: true,
+    contributions: contributions,
+    totalContributions: totalContributions,
+    totalCount: contributions.length,
+    expenses: expenses,
+    totalExpenses: totalExpenses,
+    performances: performances,
+    volunteers: volunteers
+  };
+
+  try {
+    cache.put('cache_all_data', JSON.stringify(result), CACHE_TTL_SECONDS);
+  } catch (e) {}
+
+  return jsonResponse(result);
 }
 
 /**
